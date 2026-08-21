@@ -614,6 +614,22 @@
   animation: galleryLightboxIn 220ms ease both;
 }
 
+/*
+ * Wix auto-height makes the iframe as tall as the entire Vite document.
+ * In embedded mode App.jsx supplies an absolute top/height that matches
+ * the browser's visible slice of that iframe. Percent-based image height
+ * is important here: vh inside the iframe refers to the FULL iframe
+ * viewport, not the phone viewport.
+ */
+.gallery-lightbox--embedded {
+  overflow: hidden;
+}
+
+.gallery-lightbox--embedded .gallery-lightbox__image-wrap {
+  height: 80%;
+  max-height: 950px;
+}
+
 .gallery-lightbox__image-wrap {
   display: flex;
   align-items: center;
@@ -886,6 +902,11 @@
     height: 78vh;
   }
 
+  .gallery-lightbox--embedded .gallery-lightbox__image-wrap {
+    height: 78%;
+    max-height: none;
+  }
+
   .gallery-lightbox__arrow {
     width: 46px;
     height: 46px;
@@ -955,6 +976,10 @@
 
     width: 94vw;
     height: 74vh;
+  }
+
+  .gallery-lightbox--embedded .gallery-lightbox__image-wrap {
+    height: 74%;
   }
 
   /* Anchored to the image itself (its new positioning parent) instead

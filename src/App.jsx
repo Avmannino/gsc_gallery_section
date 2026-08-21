@@ -42,6 +42,14 @@ const NET_GAP = 0.35;
 const GALLERY_AUTOPLAY_MS = 3200;
 const GALLERY_BREAKPOINT = "(max-width: 999px)";
 
+const LIGHTBOX_OPEN_MESSAGE = "GSC_LIGHTBOX_OPEN";
+const LIGHTBOX_CLOSE_MESSAGE = "GSC_LIGHTBOX_CLOSE";
+const EMBED_VIEWPORT_MESSAGE = "GSC_EMBED_VIEWPORT";
+
+const IS_EMBEDDED =
+  typeof window !== "undefined" &&
+  window.parent !== window;
+
 // Desktop cards are laid out at the full 1.45x active size instead of
 // enlarging the active image with transform: scale(). This keeps the
 // main image sharper while preserving the existing visual size/spacing
@@ -787,6 +795,7 @@ function GallerySection() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [embedViewport, setEmbedViewport] = useState(null);
 
   const dragStartRef = useRef({ x: 0, y: 0 });
   const dragPointerRef = useRef(null);
@@ -844,6 +853,55 @@ function GallerySection() {
   }, []);
 
   useEffect(() => {
+    if (!IS_EMBEDDED) {
+      return undefined;
+    }
+
+    const handleParentMessage = (event) => {
+      if (event.source !== window.parent) {
+        return;
+      }
+
+      const data = event.data;
+
+      if (
+        !data ||
+        data.type !== EMBED_VIEWPORT_MESSAGE
+      ) {
+        return;
+      }
+
+      const top = Number(data.top);
+      const height = Number(data.height);
+
+      if (
+        !Number.isFinite(top) ||
+        !Number.isFinite(height) ||
+        height < 100
+      ) {
+        return;
+      }
+
+      setEmbedViewport({
+        top: Math.max(0, top),
+        height,
+      });
+    };
+
+    window.addEventListener(
+      "message",
+      handleParentMessage,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "message",
+        handleParentMessage,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
@@ -873,44 +931,6 @@ function GallerySection() {
       return undefined;
     }
 
-    let scrollY = window.scrollY;
-
-    // On mobile the gallery section can be taller than the viewport, so
-    // the viewport that was on-screen at tap time sometimes straddles
-    // the section/footer boundary — the fixed-position lightbox then
-    // ends up centered over the footer instead of the gallery. Clamp the
-    // frozen scroll position so the viewport stays within the section.
-    if (isPortrait && sectionRef.current) {
-      const rect = sectionRef.current.getBoundingClientRect();
-      const sectionTop = rect.top + scrollY;
-      const sectionBottom = rect.bottom + scrollY;
-      const maxScrollY = Math.max(
-        sectionTop,
-        sectionBottom - window.innerHeight,
-      );
-
-      scrollY = Math.min(scrollY, maxScrollY);
-      window.scrollTo(0, scrollY);
-    }
-
-    const previousHtmlOverflow =
-      document.documentElement.style.overflow;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyPosition = document.body.style.position;
-    const previousBodyTop = document.body.style.top;
-    const previousBodyWidth = document.body.style.width;
-
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-
-    // Freezing the body at its current scroll offset (rather than just
-    // toggling overflow) keeps position:fixed anchored to the actual
-    // visible viewport on mobile Safari, which otherwise renders it at
-    // the page's scrolled-to position instead of centering on screen.
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         closeLightbox();
@@ -927,15 +947,130 @@ function GallerySection() {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    /*
+     * When this project runs inside Wix, the iframe is auto-sized to the
+     * FULL Vite document height. A position:fixed lightbox inside that
+     * iframe is therefore fixed to the giant iframe viewport — not the
+     * phone's visible browser viewport. That is why Wix can center the
+     * image much farther down the page while the direct GitHub Pages URL
+     * looks correct.
+     *
+     * For the embedded version, ask the Wix custom element for the slice
+     * of the iframe that is currently visible in the browser. The parent
+     * also freezes the Wix page while the lightbox is open. The lightbox
+     * is then positioned absolutely over that exact visible slice.
+     */
+    if (IS_EMBEDDED) {
+      setEmbedViewport(null);
+
+      window.parent.postMessage(
+        {
+          type: LIGHTBOX_OPEN_MESSAGE,
+        },
+        "*",
+      );
+
+      return () => {
+        window.removeEventListener(
+          "keydown",
+          handleKeyDown,
+        );
+
+        window.parent.postMessage(
+          {
+            type: LIGHTBOX_CLOSE_MESSAGE,
+          },
+          "*",
+        );
+      };
+    }
+
+    /*
+     * Direct GitHub Pages view:
+     * keep the existing body-freeze behavior because here the Vite page
+     * itself owns the real browser viewport.
+     */
+    let scrollY = window.scrollY;
+
+    if (isPortrait && sectionRef.current) {
+      const rect =
+        sectionRef.current.getBoundingClientRect();
+
+      const sectionTop =
+        rect.top + scrollY;
+
+      const sectionBottom =
+        rect.bottom + scrollY;
+
+      const maxScrollY = Math.max(
+        sectionTop,
+        sectionBottom - window.innerHeight,
+      );
+
+      scrollY = Math.min(
+        scrollY,
+        maxScrollY,
+      );
+
+      window.scrollTo(0, scrollY);
+    }
+
+    const previousHtmlOverflow =
+      document.documentElement.style.overflow;
+
+    const previousBodyOverflow =
+      document.body.style.overflow;
+
+    const previousBodyPosition =
+      document.body.style.position;
+
+    const previousBodyTop =
+      document.body.style.top;
+
+    const previousBodyWidth =
+      document.body.style.width;
+
+    document.documentElement.style.overflow =
+      "hidden";
+
+    document.body.style.overflow =
+      "hidden";
+
+    document.body.style.position =
+      "fixed";
+
+    document.body.style.top =
+      `-${scrollY}px`;
+
+    document.body.style.width =
+      "100%";
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.body.style.overflow = previousBodyOverflow;
-      document.body.style.position = previousBodyPosition;
-      document.body.style.top = previousBodyTop;
-      document.body.style.width = previousBodyWidth;
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+
+      document.documentElement.style.overflow =
+        previousHtmlOverflow;
+
+      document.body.style.overflow =
+        previousBodyOverflow;
+
+      document.body.style.position =
+        previousBodyPosition;
+
+      document.body.style.top =
+        previousBodyTop;
+
+      document.body.style.width =
+        previousBodyWidth;
+
       window.scrollTo(0, scrollY);
     };
   }, [lightboxIndex, isPortrait]);
@@ -1051,6 +1186,29 @@ function GallerySection() {
     setActiveIndex(index);
     setLightboxIndex(index);
   };
+
+  const embeddedLightboxStyle =
+    IS_EMBEDDED
+      ? embedViewport
+        ? {
+            position: "absolute",
+            top: `${embedViewport.top}px`,
+            right: "0",
+            bottom: "auto",
+            left: "0",
+            height: `${embedViewport.height}px`,
+            visibility: "visible",
+          }
+        : {
+            position: "absolute",
+            top: "0",
+            right: "0",
+            bottom: "auto",
+            left: "0",
+            height: "1px",
+            visibility: "hidden",
+          }
+      : undefined;
 
   return (
     <>
@@ -1231,7 +1389,14 @@ function GallerySection() {
 
       {lightboxIndex !== null && (
         <div
-          className="gallery-lightbox"
+          className={
+            `gallery-lightbox${
+              IS_EMBEDDED
+                ? " gallery-lightbox--embedded"
+                : ""
+            }`
+          }
+          style={embeddedLightboxStyle}
           role="dialog"
           aria-modal="true"
           aria-label={`Gallery image ${lightboxIndex + 1} of ${galleryItems.length}`}
