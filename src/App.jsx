@@ -866,12 +866,25 @@ function GallerySection() {
       return undefined;
     }
 
+    const scrollY = window.scrollY;
+
     const previousHtmlOverflow =
       document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
 
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+
+    // Freezing the body at its current scroll offset (rather than just
+    // toggling overflow) keeps position:fixed anchored to the actual
+    // visible viewport on mobile Safari, which otherwise renders it at
+    // the page's scrolled-to position instead of centering on screen.
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -895,6 +908,10 @@ function GallerySection() {
       window.removeEventListener("keydown", handleKeyDown);
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
     };
   }, [lightboxIndex]);
 
@@ -1189,42 +1206,42 @@ function GallerySection() {
           aria-modal="true"
           aria-label={`Gallery image ${lightboxIndex + 1} of ${galleryItems.length}`}
         >
-          <button
-            type="button"
-            className="gallery-lightbox__close"
-            onClick={closeLightbox}
-            aria-label="Close full image view"
-          >
-            <CloseIcon />
-          </button>
-
-          <button
-            type="button"
-            className="gallery-lightbox__arrow gallery-lightbox__arrow--previous"
-            onClick={showPreviousLightboxImage}
-            aria-label="Show previous full image"
-          >
-            <GalleryArrowIcon direction="left" />
-          </button>
-
           <div className="gallery-lightbox__image-wrap">
             <img
               src={galleryItems[lightboxIndex].src}
               alt={galleryItems[lightboxIndex].alt}
             />
-          </div>
 
-          <button
-            type="button"
-            className="gallery-lightbox__arrow gallery-lightbox__arrow--next"
-            onClick={showNextLightboxImage}
-            aria-label="Show next full image"
-          >
-            <GalleryArrowIcon direction="right" />
-          </button>
+            <button
+              type="button"
+              className="gallery-lightbox__close"
+              onClick={closeLightbox}
+              aria-label="Close full image view"
+            >
+              <CloseIcon />
+            </button>
 
-          <div className="gallery-lightbox__counter">
-            {String(lightboxIndex + 1).padStart(2, "0")} / {String(galleryItems.length).padStart(2, "0")}
+            <button
+              type="button"
+              className="gallery-lightbox__arrow gallery-lightbox__arrow--previous"
+              onClick={showPreviousLightboxImage}
+              aria-label="Show previous full image"
+            >
+              <GalleryArrowIcon direction="left" />
+            </button>
+
+            <button
+              type="button"
+              className="gallery-lightbox__arrow gallery-lightbox__arrow--next"
+              onClick={showNextLightboxImage}
+              aria-label="Show next full image"
+            >
+              <GalleryArrowIcon direction="right" />
+            </button>
+
+            <div className="gallery-lightbox__counter">
+              {String(lightboxIndex + 1).padStart(2, "0")} / {String(galleryItems.length).padStart(2, "0")}
+            </div>
           </div>
         </div>
       )}

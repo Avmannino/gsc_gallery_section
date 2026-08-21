@@ -950,22 +950,30 @@
     opacity: 0.07;
   }
 
+  .gallery-lightbox__image-wrap {
+    position: relative;
+
+    width: 94vw;
+    height: 74vh;
+  }
+
+  /* Anchored to the image itself (its new positioning parent) instead
+     of the fullscreen overlay, so it's positioned relative to the
+     image's own corner rather than floating near the screen edge. */
   .gallery-lightbox__close {
-    top: 12px;
-    right: 12px;
+    top: 95px;
+    right: 10px;
 
     width: 44px;
     height: 44px;
   }
 
-  .gallery-lightbox__image-wrap {
-    width: 94vw;
-    height: 74vh;
-  }
-
+  /* top/bottom below are relative to .gallery-lightbox__image-wrap (its
+     new positioning parent), so these sit just under the photo itself
+     instead of floating near the bottom of the screen. */
   .gallery-lightbox__arrow {
-    top: auto;
-    bottom: 26px;
+    top: calc(100% + 18px);
+    bottom: auto;
 
     width: 44px;
     height: 44px;
@@ -987,7 +995,8 @@
   }
 
   .gallery-lightbox__counter {
-    bottom: 37px;
+    top: calc(100% + 24px);
+    bottom: auto;
   }
 }
 
