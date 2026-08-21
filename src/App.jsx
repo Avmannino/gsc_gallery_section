@@ -1162,19 +1162,6 @@ function GallerySection() {
                 >
                   <GalleryArrowIcon direction="right" />
                 </button>
-
-                <div
-                  className="gallery-counter"
-                  aria-live="polite"
-                >
-                  <span>
-                    {String(activeIndex + 1).padStart(2, "0")}
-                  </span>
-                  <span aria-hidden="true">/</span>
-                  <span>
-                    {String(galleryItems.length).padStart(2, "0")}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
