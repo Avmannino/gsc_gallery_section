@@ -1266,6 +1266,8 @@
   display: inline-flex;
   flex: 0 0 auto;
 
+  color: var(--footer-red);
+
   transform: rotate(90deg);
 
   transition: transform 220ms ease;
