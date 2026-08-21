@@ -430,15 +430,15 @@
   -webkit-user-select: none;
 
   -webkit-mask-image: linear-gradient(90deg,
-      transparent 0%,
+      rgba(0, 0, 0, 0.6) 0%,
       #000 2.5%,
       #000 97.5%,
-      transparent 100%);
+      rgba(0, 0, 0, 0.6) 100%);
   mask-image: linear-gradient(90deg,
-      transparent 0%,
+      rgba(0, 0, 0, 0.6) 0%,
       #000 2.5%,
       #000 97.5%,
-      transparent 100%);
+      rgba(0, 0, 0, 0.6) 100%);
 }
 
 .gallery-stage--dragging .gallery-viewport {
@@ -826,19 +826,19 @@
     touch-action: pan-x;
 
     -webkit-mask-image: linear-gradient(180deg,
-        transparent 0%,
+        rgba(0, 0, 0, 0.6) 0%,
         #000 2%,
         #000 98%,
-        transparent 100%);
+        rgba(0, 0, 0, 0.6) 100%);
     mask-image: linear-gradient(180deg,
-        transparent 0%,
+        rgba(0, 0, 0, 0.6) 0%,
         #000 2%,
         #000 98%,
-        transparent 100%);
+        rgba(0, 0, 0, 0.6) 100%);
   }
 
   .gallery-card {
-    width: min(78%, 440px);
+    width: min(94%, 528px);
   }
 
   .gallery-control {
@@ -873,7 +873,7 @@
   }
 
   .gallery-card {
-    width: min(82%, 390px);
+    width: min(96%, 468px);
     border-radius: clamp(12px, 2.4vw, 18px);
   }
 
@@ -934,7 +934,7 @@
   }
 
   .gallery-card {
-    width: min(86%, 340px);
+    width: min(96%, 408px);
     border-radius: 16px;
   }
 
@@ -1016,7 +1016,7 @@
   }
 
   .gallery-card {
-    width: 88%;
+    width: 96%;
   }
 }
 

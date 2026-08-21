@@ -50,6 +50,12 @@ const DESKTOP_ACTIVE_CARD_RATIO = 1.45;
 const DESKTOP_TRANSLATE_STEP_PERCENT =
   86 / DESKTOP_ACTIVE_CARD_RATIO;
 
+// Same technique as desktop, applied to the mobile/portrait carousel's
+// .gallery-card width overrides.
+const MOBILE_ACTIVE_CARD_RATIO = 1.2;
+const MOBILE_TRANSLATE_STEP_PERCENT =
+  76 / MOBILE_ACTIVE_CARD_RATIO;
+
 const galleryItems = [
   {
     src: `${GALLERY_IMAGE_BASE}gallery-01.jpeg`,
@@ -786,6 +792,7 @@ function GallerySection() {
   const dragPointerRef = useRef(null);
   const suppressClickRef = useRef(false);
   const pressedIndexRef = useRef(null);
+  const sectionRef = useRef(null);
 
   const goToPrevious = () => {
     setActiveIndex((current) =>
@@ -866,7 +873,25 @@ function GallerySection() {
       return undefined;
     }
 
-    const scrollY = window.scrollY;
+    let scrollY = window.scrollY;
+
+    // On mobile the gallery section can be taller than the viewport, so
+    // the viewport that was on-screen at tap time sometimes straddles
+    // the section/footer boundary — the fixed-position lightbox then
+    // ends up centered over the footer instead of the gallery. Clamp the
+    // frozen scroll position so the viewport stays within the section.
+    if (isPortrait && sectionRef.current) {
+      const rect = sectionRef.current.getBoundingClientRect();
+      const sectionTop = rect.top + scrollY;
+      const sectionBottom = rect.bottom + scrollY;
+      const maxScrollY = Math.max(
+        sectionTop,
+        sectionBottom - window.innerHeight,
+      );
+
+      scrollY = Math.min(scrollY, maxScrollY);
+      window.scrollTo(0, scrollY);
+    }
 
     const previousHtmlOverflow =
       document.documentElement.style.overflow;
@@ -913,7 +938,7 @@ function GallerySection() {
       document.body.style.width = previousBodyWidth;
       window.scrollTo(0, scrollY);
     };
-  }, [lightboxIndex]);
+  }, [lightboxIndex, isPortrait]);
 
   const handlePointerDown = (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
@@ -1030,6 +1055,7 @@ function GallerySection() {
   return (
     <>
       <section
+        ref={sectionRef}
         className="rinkcards-section"
         aria-labelledby="rinkcards-section-title"
         style={{
@@ -1120,16 +1146,18 @@ function GallerySection() {
                       1 - Math.min(distance, 3) * 0.095,
                     );
 
-                    // Desktop cards are physically rendered at the full
-                    // 1.45x active size. Only the surrounding cards are
-                    // scaled down so their visible size stays exactly where
-                    // it was before. The active card itself renders at scale 1,
-                    // which avoids enlarging a smaller rasterized image layer.
-                    const scale = isPortrait
-                      ? baseScale
-                      : distance === 0
+                    // Both desktop and portrait cards are physically
+                    // rendered at their enlarged active size. Only the
+                    // surrounding cards are scaled down so their visible
+                    // size stays exactly where it was before. The active
+                    // card itself renders at scale 1, which avoids
+                    // enlarging a smaller rasterized image layer.
+                    const scale =
+                      distance === 0
                         ? 1
-                        : baseScale / DESKTOP_ACTIVE_CARD_RATIO;
+                        : isPortrait
+                          ? baseScale / MOBILE_ACTIVE_CARD_RATIO
+                          : baseScale / DESKTOP_ACTIVE_CARD_RATIO;
                     const opacity =
                       distance > 3
                         ? 0
@@ -1139,7 +1167,9 @@ function GallerySection() {
                       distance <= 2 ? "auto" : "none";
 
                     const transform = isPortrait
-                      ? `translate(-50%, -50%) translateY(calc(${visualOffset * 76}% + ${dragOffset}px)) translateZ(${-distance * 70}px) rotateX(${visualOffset * 11}deg) scale(${scale})`
+                      ? distance === 0
+                        ? `translate(-50%, -50%) translateY(${dragOffset}px)`
+                        : `translate(-50%, -50%) translateY(calc(${visualOffset * MOBILE_TRANSLATE_STEP_PERCENT}% + ${dragOffset}px)) translateZ(${-distance * 70}px) rotateX(${visualOffset * 11}deg) scale(${scale})`
                       : distance === 0
                         ? `translate(-50%, -50%) translateX(${dragOffset}px)`
                         : `translate(-50%, -50%) translateX(calc(${visualOffset * DESKTOP_TRANSLATE_STEP_PERCENT}% + ${dragOffset}px)) translateZ(${-distance * 92}px) rotateY(${visualOffset * -15}deg) scale(${scale})`;
