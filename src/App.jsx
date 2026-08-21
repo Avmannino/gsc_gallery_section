@@ -42,9 +42,8 @@ const NET_GAP = 0.35;
 const GALLERY_AUTOPLAY_MS = 3200;
 const GALLERY_BREAKPOINT = "(max-width: 999px)";
 
-const LIGHTBOX_OPEN_MESSAGE = "GSC_LIGHTBOX_OPEN";
-const LIGHTBOX_CLOSE_MESSAGE = "GSC_LIGHTBOX_CLOSE";
 const EMBED_VIEWPORT_MESSAGE = "GSC_EMBED_VIEWPORT";
+const EMBED_VIEWPORT_REQUEST_MESSAGE = "GSC_EMBED_VIEWPORT_REQUEST";
 
 const IS_EMBEDDED =
   typeof window !== "undefined" &&
@@ -801,6 +800,7 @@ function GallerySection() {
   const dragPointerRef = useRef(null);
   const suppressClickRef = useRef(false);
   const pressedIndexRef = useRef(null);
+  const pressedCardRectRef = useRef(null);
   const sectionRef = useRef(null);
 
   const goToPrevious = () => {
@@ -955,22 +955,18 @@ function GallerySection() {
     /*
      * When this project runs inside Wix, the iframe is auto-sized to the
      * FULL Vite document height. A position:fixed lightbox inside that
-     * iframe is therefore fixed to the giant iframe viewport — not the
-     * phone's visible browser viewport. That is why Wix can center the
-     * image much farther down the page while the direct GitHub Pages URL
-     * looks correct.
+     * iframe would therefore be fixed to the giant iframe viewport — not
+     * to the phone's visible browser viewport.
      *
-     * For the embedded version, ask the Wix custom element for the slice
-     * of the iframe that is currently visible in the browser. The parent
-     * also freezes the Wix page while the lightbox is open. The lightbox
-     * is then positioned absolutely over that exact visible slice.
+     * Ask the Wix custom element for the exact visible slice of the iframe
+     * and position the lightbox absolutely over that slice. IMPORTANT:
+     * the parent Wix page is NOT frozen or restyled. Freezing Wix's body
+     * can blank the page on mobile because Wix manages its own page shell.
      */
     if (IS_EMBEDDED) {
-      setEmbedViewport(null);
-
       window.parent.postMessage(
         {
-          type: LIGHTBOX_OPEN_MESSAGE,
+          type: EMBED_VIEWPORT_REQUEST_MESSAGE,
         },
         "*",
       );
@@ -979,13 +975,6 @@ function GallerySection() {
         window.removeEventListener(
           "keydown",
           handleKeyDown,
-        );
-
-        window.parent.postMessage(
-          {
-            type: LIGHTBOX_CLOSE_MESSAGE,
-          },
-          "*",
         );
       };
     }
@@ -1094,6 +1083,10 @@ function GallerySection() {
       ? Number(pressedCard.dataset.index)
       : null;
 
+    pressedCardRectRef.current = pressedCard
+      ? pressedCard.getBoundingClientRect()
+      : null;
+
     suppressClickRef.current = false;
     setIsDragging(true);
     setDragOffset(0);
@@ -1152,10 +1145,14 @@ function GallerySection() {
         suppressClickRef.current = false;
       }, 0);
     } else if (pressedIndexRef.current !== null) {
-      openLightbox(pressedIndexRef.current);
+      openLightbox(
+        pressedIndexRef.current,
+        pressedCardRectRef.current,
+      );
     }
 
     pressedIndexRef.current = null;
+    pressedCardRectRef.current = null;
     dragPointerRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
@@ -1173,41 +1170,73 @@ function GallerySection() {
     }
 
     pressedIndexRef.current = null;
+    pressedCardRectRef.current = null;
     dragPointerRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
   };
 
-  const openLightbox = (index) => {
+  const getFallbackEmbedViewport = (triggerRect) => {
+    const screenHeight =
+      Number(window.screen?.height) || 800;
+
+    const height = Math.min(
+      960,
+      Math.max(520, screenHeight * 0.92),
+    );
+
+    const sectionRect =
+      sectionRef.current?.getBoundingClientRect();
+
+    const centerY = triggerRect
+      ? triggerRect.top + triggerRect.height / 2
+      : sectionRect
+        ? sectionRect.top + sectionRect.height / 2
+        : height / 2;
+
+    return {
+      top: Math.max(0, centerY - height / 2),
+      height,
+    };
+  };
+
+  const openLightbox = (index, triggerRect = null) => {
     if (suppressClickRef.current) {
       return;
+    }
+
+    /*
+     * Never wait on Wix before rendering the overlay. If the parent viewport
+     * message has not arrived yet, immediately center a correctly sized
+     * fallback overlay around the card that was tapped. Wix then replaces
+     * this with the exact browser-visible slice as soon as it responds.
+     */
+    if (IS_EMBEDDED) {
+      setEmbedViewport(
+        getFallbackEmbedViewport(triggerRect),
+      );
     }
 
     setActiveIndex(index);
     setLightboxIndex(index);
   };
 
-  const embeddedLightboxStyle =
+  const resolvedEmbedViewport =
     IS_EMBEDDED
-      ? embedViewport
-        ? {
-            position: "absolute",
-            top: `${embedViewport.top}px`,
-            right: "0",
-            bottom: "auto",
-            left: "0",
-            height: `${embedViewport.height}px`,
-            visibility: "visible",
-          }
-        : {
-            position: "absolute",
-            top: "0",
-            right: "0",
-            bottom: "auto",
-            left: "0",
-            height: "1px",
-            visibility: "hidden",
-          }
+      ? embedViewport || getFallbackEmbedViewport(null)
+      : null;
+
+  const embeddedLightboxStyle =
+    IS_EMBEDDED && resolvedEmbedViewport
+      ? {
+          position: "absolute",
+          top: `${resolvedEmbedViewport.top}px`,
+          right: "0",
+          bottom: "auto",
+          left: "0",
+          height: `${resolvedEmbedViewport.height}px`,
+          visibility: "visible",
+        }
       : undefined;
 
   return (
@@ -1350,7 +1379,12 @@ function GallerySection() {
                           pointerEvents,
                         }}
                         data-index={index}
-                        onClick={() => openLightbox(index)}
+                        onClick={(event) =>
+                          openLightbox(
+                            index,
+                            event.currentTarget.getBoundingClientRect(),
+                          )
+                        }
                         aria-label={`Open image ${index + 1} of ${galleryItems.length}`}
                         aria-current={
                           index === activeIndex
