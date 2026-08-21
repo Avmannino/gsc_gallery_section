@@ -107,7 +107,7 @@ const exploreGroups = [
     links: [
       {
         label: "About GSC",
-        href: `${SITE_BASE_URL}/about-gsc`,
+        href: `${SITE_BASE_URL}/about`,
       },
       {
         label: "Club History",
