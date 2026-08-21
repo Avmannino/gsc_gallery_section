@@ -785,6 +785,7 @@ function GallerySection() {
   const dragStartRef = useRef({ x: 0, y: 0 });
   const dragPointerRef = useRef(null);
   const suppressClickRef = useRef(false);
+  const pressedIndexRef = useRef(null);
 
   const goToPrevious = () => {
     setActiveIndex((current) =>
@@ -908,6 +909,14 @@ function GallerySection() {
       y: event.clientY,
     };
 
+    // Read the pressed card's index before pointer capture (below) starts
+    // retargeting this pointer's events — including the eventual click — to
+    // .gallery-viewport itself, which has no click handler of its own.
+    const pressedCard = event.target.closest?.(".gallery-card");
+    pressedIndexRef.current = pressedCard
+      ? Number(pressedCard.dataset.index)
+      : null;
+
     suppressClickRef.current = false;
     setIsDragging(true);
     setDragOffset(0);
@@ -965,8 +974,11 @@ function GallerySection() {
       window.setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
+    } else if (pressedIndexRef.current !== null) {
+      openLightbox(pressedIndexRef.current);
     }
 
+    pressedIndexRef.current = null;
     dragPointerRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
@@ -983,6 +995,7 @@ function GallerySection() {
       return;
     }
 
+    pressedIndexRef.current = null;
     dragPointerRef.current = null;
     setDragOffset(0);
     setIsDragging(false);
@@ -1131,6 +1144,7 @@ function GallerySection() {
                           zIndex,
                           pointerEvents,
                         }}
+                        data-index={index}
                         onClick={() => openLightbox(index)}
                         aria-label={`Open image ${index + 1} of ${galleryItems.length}`}
                         aria-current={
