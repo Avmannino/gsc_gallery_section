@@ -961,7 +961,7 @@
      of the fullscreen overlay, so it's positioned relative to the
      image's own corner rather than floating near the screen edge. */
   .gallery-lightbox__close {
-    top: 95px;
+    top: 20px;
     right: 10px;
 
     width: 44px;
