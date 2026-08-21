@@ -1506,7 +1506,7 @@ function ConnectPanel() {
             <PinIcon />
 
             <span>
-              9 Cardinal Road · Greenwich, CT 06830
+              11 Cardinal Road · Greenwich, CT 06830
             </span>
           </a>
 

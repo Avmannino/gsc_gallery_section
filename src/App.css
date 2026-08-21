@@ -1331,7 +1331,7 @@
 .footer-menu__group li a {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 
   gap: 8px;
 
@@ -1709,8 +1709,21 @@
 
   .footer-menu__group-title {
     justify-content: center;
+  }
 
+  /* Transformed individually (not on .footer-menu__group-title itself)
+     so the button's own box — and its border-bottom divider — doesn't
+     shift along with them. */
+  .footer-menu__group-title span:first-child {
     transform: translateX(10px);
+  }
+
+  .footer-menu__group-arrow {
+    transform: translateX(10px) rotate(90deg);
+  }
+
+  .footer-menu__group-arrow--open {
+    transform: translateX(10px) rotate(-90deg);
   }
 
   .footer-menu__group li a svg {
@@ -1722,7 +1735,26 @@
   }
 
   .footer-connect {
+    position: relative;
+
     padding-top: 24px;
+
+    border-top: none;
+  }
+
+  .footer-connect::before {
+    content: "";
+
+    position: absolute;
+    top: 0;
+    left: 50%;
+
+    width: 75%;
+    height: 1px;
+
+    transform: translateX(-50%);
+
+    background: var(--gsc-red);
   }
 
   .footer-connect__info {
